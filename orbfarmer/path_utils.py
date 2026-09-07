@@ -3,6 +3,7 @@ path_utils.py – Path and filename sanitization for Windows compatibility.
 """
 
 import re
+from pathlib import Path
 
 # Illegal characters paths:
 # < > : " / \ | ? * and ASCII control characters (0-31)
@@ -61,3 +62,18 @@ def sanitize_relative_path(path_str: str, replacement: str = "") -> str:
         return "unnamed"
 
     return "/".join(cleaned_segments)
+
+
+def resolve_within(base: Path, *relative_parts: str) -> Path:
+    """Resolve a path and require it to remain inside *base*.
+
+    Resolving before the containment check also catches existing directory
+    symlinks and Windows junctions that redirect a seemingly relative path.
+    """
+    base_resolved = Path(base).expanduser().resolve()
+    candidate = base_resolved.joinpath(*relative_parts).resolve(strict=False)
+    try:
+        candidate.relative_to(base_resolved)
+    except ValueError as exc:
+        raise ValueError(f"Path escapes the allowed directory: {candidate}") from exc
+    return candidate

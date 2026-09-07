@@ -1,5 +1,5 @@
 """
-orbshacker – Discord Orb Quest Faker.
+orbfarmer – Discord Orb Quest Faker.
 
 EDUCATIONAL PURPOSES ONLY.
 """

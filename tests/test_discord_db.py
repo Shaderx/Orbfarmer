@@ -1,6 +1,6 @@
 """Tests for discord_db.py – pure functions only (no network calls)."""
 
-from orbshacker.discord_db import DiscordGamesDB
+from orbfarmer.discord_db import DiscordGamesDB
 
 
 def _make_db_with_games(games: list) -> DiscordGamesDB:

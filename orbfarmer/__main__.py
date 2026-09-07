@@ -1,4 +1,4 @@
-"""Entry point for `python -m orbshacker`."""
+"""Entry point for `python -m orbfarmer`."""
 
 import sys
 

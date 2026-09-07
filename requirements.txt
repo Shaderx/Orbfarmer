@@ -1,3 +1,8 @@
-requests>=2.31.0
-packaging>=23.0
-pytest>=8.0.0
+# Runtime dependencies pinned for repeatable local builds.
+certifi==2026.7.22
+charset-normalizer==3.5.1
+idna==3.19
+packaging==26.3
+Pillow==12.3.0
+requests==2.34.2
+urllib3==2.7.0

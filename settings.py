@@ -1,11 +1,12 @@
 from pathlib import Path
 # ╔═══════════════════════════════════════════════════════════╗
-# ║             ORBSHACKER – USER SETTINGS                   ║
+# ║             ORBFARMER – USER SETTINGS                   ║
 # ║  Edit values here. The app reads from this file.         ║
 # ╚═══════════════════════════════════════════════════════════╝
 
-# ── Destination folder for faked executables (defaults to Desktop) ──
-CHOSEN_FOLDER = Path.home() / "Desktop"
+# ── Base directory; relative paths resolve beside the application ──
+CHOSEN_FOLDER = "."
+FAKE_EXE_DIR = "simulations"
 
 # ── Automatically delete faked executables and processes on exit ──
 AUTO_DELETE = False

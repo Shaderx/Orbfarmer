@@ -3,8 +3,8 @@
 Backward-compatible entry point.
 
 Usage:
-    python orbshacker.py         (main menu)
-    python -m orbshacker         (package-style)
+    python orbfarmer.py         (main menu)
+    python -m orbfarmer         (package-style)
 
 When launched with --timer-mode (by a renamed copy of itself),
 it runs the 15-minute timer instead of the main menu.
@@ -29,10 +29,10 @@ def is_faked_game() -> bool:
     """Check if the currently running executable/script is a faked game copy."""
     if getattr(sys, "frozen", False):
         name = Path(sys.executable).name.lower()
-        return name != "orbshacker.exe"
+        return name != "orbfarmer.exe"
     else:
         name = Path(sys.argv[0]).name.lower()
-        return name not in ("orbshacker.py", "__main__.py") and "pytest" not in name
+        return name not in ("orbfarmer.py", "__main__.py") and "pytest" not in name
 
 def show_console() -> None:
     """Allocate and show a Windows console window if running on Windows."""
@@ -56,18 +56,19 @@ def show_console() -> None:
 
 if __name__ == "__main__":
     if is_faked_game() or "--timer-mode" in sys.argv:
-        from orbshacker.timer import run_timer
+        from orbfarmer.timer import run_timer
         try:
             idx = sys.argv.index("--timer-mode")
             minutes = int(sys.argv[idx + 1])
         except (ValueError, IndexError):
-            from orbshacker import config
+            from orbfarmer import config
             minutes = config.TIMER_MINUTES
-        run_timer(minutes)
+        from orbfarmer import config
+        run_timer(minutes, theme=config.TIMER_THEME)
     else:
         show_console()
-        from orbshacker.main import main
-        from orbshacker.ui import print_color, Colors
+        from orbfarmer.main import main
+        from orbfarmer.ui import print_color, Colors
 
         try:
             main()

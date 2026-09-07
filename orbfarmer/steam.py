@@ -9,7 +9,12 @@ from typing import Any, TypedDict, cast
 from pathlib import Path
 
 from . import config
-from .path_utils import sanitize_filename, sanitize_path_segment, sanitize_relative_path
+from .path_utils import (
+    resolve_within,
+    sanitize_filename,
+    sanitize_path_segment,
+    sanitize_relative_path,
+)
 from .faker import GameFaker
 from .ui import (
     Colors, print_color, print_boxed_title,
@@ -199,7 +204,7 @@ def generate_appmanifest(appid: int, name: str, installdir: str, steam_path: Pat
     acf_path = steam_path / "steamapps" / f"appmanifest_{appid}.acf"
     try:
         acf_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(acf_path, "w", encoding="utf-8") as f:
+        with open(acf_path, "x", encoding="utf-8") as f:
             f.write(acf_content)
         print_color(f"[OK] Created appmanifest: {acf_path}", Colors.GREEN, bold=True)
         return acf_path
@@ -273,17 +278,12 @@ def _prompt_app_info_manually(appid: int) -> SteamAppInfo:
 
 
 def steam_quest_mode(faker: GameFaker) -> None:
-    """Steam Quest Mode – generates appmanifest + fake exe for any Steam appid."""
+    """Use Steam metadata to launch a simulation in the shared output folder."""
     print_boxed_title("STEAM QUEST MODE", width=55, color=Colors.CYAN)
-    print_color("[*] This mode generates a fake Steam appmanifest + exe", Colors.CYAN)
-    print_color("[*] Required for games that verify Steam ownership (Marathon, Toxic Commando…)", Colors.GRAY)
+    print_color("[*] This mode uses Steam metadata to create a simulation", Colors.CYAN)
+    print_color("[*] Output goes to the configured simulations folder.", Colors.GRAY)
     print_color("[*] Search by name — demos and DLCs are separate, pick the right one!", Colors.YELLOW)
     print()
-
-    steam_path = _resolve_steam_path()
-    if not steam_path:
-        return
-    print_color(f"[OK] Steam found at: {steam_path}", Colors.GREEN)
 
     query = input(f"\n{Colors.BOLD}Search game{Colors.RESET} (or 'back'): ").strip()
     if query.lower() in ('back', 'b', ''):
@@ -308,10 +308,13 @@ def steam_quest_mode(faker: GameFaker) -> None:
     info['installdir'] = sanitize_path_segment(info['installdir'])
 
     exe_full_path = f"{info['installdir']}/{info['executable']}"
-    fake_exe_path = steam_path / "steamapps" / "common" / exe_full_path.replace("/", os.sep)
+    fake_exe_path = resolve_within(
+        faker.chosen_path,
+        config.FAKE_EXE_DIR,
+        exe_full_path.replace("/", os.sep),
+    )
 
     print(f"\n{Colors.BOLD}Summary:{Colors.RESET}")
-    print(f"  AppManifest: {Colors.GRAY}{steam_path / 'steamapps' / f'appmanifest_{appid}.acf'}{Colors.RESET}")
     print(f"  Fake exe:    {Colors.GRAY}{fake_exe_path}{Colors.RESET}")
 
     if not ask_confirm():
@@ -319,30 +322,26 @@ def steam_quest_mode(faker: GameFaker) -> None:
         time.sleep(config.SLEEP_SHORT)
         return
 
-    acf = generate_appmanifest(appid, info['name'], info['installdir'], steam_path, depot_id=info.get('depot_id'))
-    if not acf:
-        print_color("[ERROR] Failed to create appmanifest. Aborting.", Colors.RED)
-        time.sleep(config.SLEEP_SHORT)
-        return
-
-    faker.register_created_file(acf)
-
+    scope = faker.begin_scope()
     try:
-        loading_animation(f"Creating {info['executable'].split('/')[-1]}", 0.8)
-        config.STEAM_MANIFEST_PATH = acf
-        faker.copy_exe_to(fake_exe_path)
-        print_color(f"[OK] Created: {fake_exe_path}", Colors.GREEN, bold=True)
-    except Exception as e:
-        print_color(f"[ERROR] Failed to copy exe: {e}", Colors.RED, bold=True)
-        time.sleep(config.SLEEP_SHORT)
-        return
-    finally:
-        if hasattr(config, "STEAM_MANIFEST_PATH"):
-            delattr(config, "STEAM_MANIFEST_PATH")
+        try:
+            loading_animation(f"Creating {info['executable'].split('/')[-1]}", 0.8)
+            faker.copy_exe_to(fake_exe_path, game_name=game['name'], steam_appid=appid)
+            print_color(f"[OK] Created: {fake_exe_path}", Colors.GREEN, bold=True)
+        except Exception as e:
+            print_color(f"[ERROR] Failed to copy exe: {e}", Colors.RED, bold=True)
+            time.sleep(config.SLEEP_SHORT)
+            return
 
-    print()
-    faker.launch_executable(fake_exe_path)
-    print_color("\n[OK] Steam Quest setup complete!", Colors.GREEN, bold=True)
-    print_color("[!] Discord MUST be running for detection to work.", Colors.YELLOW)
-    print_color("[*] Keep the process running until the quest is done.", Colors.CYAN)
-    input(f"\n{Colors.GRAY}Press Enter to continue...{Colors.RESET}")
+        print()
+        if not faker.launch_executable(fake_exe_path):
+            print_color("[ERROR] Failed to start the simulation.", Colors.RED, bold=True)
+            time.sleep(config.SLEEP_SHORT)
+            return
+
+        print_color("\n[OK] Steam Quest setup complete!", Colors.GREEN, bold=True)
+        print_color("[!] Discord MUST be running for detection to work.", Colors.YELLOW)
+        print_color("[*] Keep the process running until the quest is done.", Colors.CYAN)
+        input(f"\n{Colors.GRAY}Press Enter to stop simulation and clean up...{Colors.RESET}")
+    finally:
+        faker.cleanup_scope(scope)

@@ -26,6 +26,7 @@ class GameRecord(TypedDict, total=False):
     name: str
     aliases: list[str]
     executables: list[ExecutableEntry]
+    third_party_skus: list[dict[str, str]]
 
 
 class DiscordGamesDB:
@@ -218,7 +219,9 @@ def database_mode(db: DiscordGamesDB, faker: GameFaker) -> None:
         time.sleep(config.SLEEP_SHORT)
         return
 
-    result = faker.create_fake_game(exe_name)
+    steam_appid = next((sku.get("id") for sku in selected.get("third_party_skus", [])
+                       if sku.get("distributor") == "steam"), None)
+    result = faker.create_fake_game(exe_name, game_name=selected.get("name"), steam_appid=steam_appid)
     if result:
         print()
         faker.launch_executable(result)

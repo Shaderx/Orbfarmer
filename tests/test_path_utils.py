@@ -1,7 +1,8 @@
 """Tests for path_utils.py – sanitization of Windows filenames and paths."""
 
 import pytest
-from orbshacker.path_utils import (
+from orbfarmer.path_utils import (
+    resolve_within,
     sanitize_filename,
     sanitize_path_segment,
     sanitize_relative_path,
@@ -59,3 +60,13 @@ class TestSanitizeRelativePath:
 
     def test_empty_returns_unnamed(self):
         assert sanitize_relative_path("") == "unnamed"
+
+
+class TestResolveWithin:
+    def test_rejects_parent_escape(self, tmp_path):
+        with pytest.raises(ValueError):
+            resolve_within(tmp_path / "base", "..", "outside.exe")
+
+    def test_returns_resolved_contained_path(self, tmp_path):
+        base = tmp_path / "base"
+        assert resolve_within(base, "bin", "game.exe") == (base / "bin" / "game.exe").resolve()

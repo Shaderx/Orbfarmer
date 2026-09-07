@@ -1,22 +1,34 @@
-"""Tests for updater.py – pure helper functions."""
+"""Security-focused tests for notification-only update checks."""
 
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from orbshacker.updater import _sha256
+from orbfarmer import config
+from orbfarmer.updater import _get_latest_release, auto_update
 
 
-class TestSha256:
-    def test_consistent_hash(self, tmp_path):
-        f = tmp_path / "hello.txt"
-        f.write_text("hello world")
-        h1 = _sha256(f)
-        h2 = _sha256(f)
-        assert h1 == h2
-        assert len(h1) == 64  # SHA-256 hex digest length
+def test_release_check_uses_the_audited_repository():
+    response = MagicMock()
+    response.json.return_value = {"tag_name": "v9.9.9"}
+    with patch("orbfarmer.updater.requests.get", return_value=response) as request:
+        _get_latest_release()
 
-    def test_different_content_different_hash(self, tmp_path):
-        f1 = tmp_path / "a.txt"
-        f2 = tmp_path / "b.txt"
-        f1.write_text("aaa")
-        f2.write_text("bbb")
-        assert _sha256(f1) != _sha256(f2)
+    request.assert_called_once_with(
+        "https://api.github.com/repos/Shaderx/Orbfarmer/releases/latest",
+        timeout=config.REQUEST_TIMEOUT,
+    )
+
+
+def test_new_release_is_notification_only_and_rejects_foreign_url():
+    release = {
+        "tag_name": "v999.0.0",
+        "html_url": "https://evil.example/payload.exe",
+        "assets": [{"name": "payload.exe", "browser_download_url": "https://evil.example/payload.exe"}],
+    }
+    with patch("orbfarmer.updater._get_latest_release", return_value=release), \
+         patch("orbfarmer.updater.ui.print_color") as output:
+        auto_update()
+
+    rendered = " ".join(str(call.args[0]) for call in output.call_args_list)
+    assert "automatic installation is disabled" in rendered
+    assert "https://github.com/Shaderx/Orbfarmer/releases/latest" in rendered
+    assert "evil.example" not in rendered

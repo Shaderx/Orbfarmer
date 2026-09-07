@@ -48,10 +48,7 @@ def print_banner() -> None:
     banner = f"""
 {Colors.CYAN}{Colors.BOLD}
                                                                 
- _____ _____ _____ _____    _____ _____ _____ _____ _____ _____ 
-|     | __  | __  |   __|  |  |  |  _  |     |  |  |   __| __  |
-|  |  |    -| __ -|__   |  |     |     |   --|    -|   __|    -|
-|_____|__|__|_____|_____|  |__|__|__|__|_____|__|__|_____|__|__|
+    O R B F A R M E R
                                                                 
 {Colors.RESET}
     {Colors.GRAY}Developer: {Colors.CYAN}{config.DEVELOPER}{Colors.RESET}
@@ -99,7 +96,7 @@ def print_menu() -> None:
     print_boxed_title("MAIN MENU", width=50, color=Colors.CYAN)
     print(f"  {Colors.BOLD}{Colors.GREEN}1.{Colors.RESET} Search Discord database (Official API)")
     print(f"  {Colors.BOLD}{Colors.GREEN}2.{Colors.RESET} Manual mode (custom executable)")
-    print(f"  {Colors.BOLD}{Colors.YELLOW}3.{Colors.RESET} Steam Quest Mode  {Colors.YELLOW}[NEW - for Marathon, Toxic Commando…]{Colors.RESET}")
+    print(f"  {Colors.BOLD}{Colors.YELLOW}3.{Colors.RESET} Steam Quest Mode (Steam catalog search)")
     print(f"  {Colors.BOLD}{Colors.GREEN}4.{Colors.RESET} Credits & Info")
     print(f"  {Colors.BOLD}{Colors.RED}5.{Colors.RESET} Exit\n")
 
@@ -121,33 +118,28 @@ def show_credits() -> None:
     {Colors.BOLD}How it works (Game Spoofing):{Colors.RESET}
     1. Connects to Discord's official API to get the latest game list
     2. Finds the exact process name Discord expects for each game
-    3. Copies exe.exe to Desktop/Win64/ and renames it to match
-    4. Launches the fake process in background
-    5. Discord scans running processes and detects the fake process name
-    6. Discord thinks you're playing the game (process name match)
-    7. The fake process must stay running for Discord to keep detecting it
+    3. Creates the matching executable path under simulations/
+    4. Opens a visible game-themed timer window
+    5. Keep the window open and check detection and quest progress in Discord
     
-    {Colors.BOLD}Steam Quest Mode (NEW):{Colors.RESET}
-    Some games (Marathon, Toxic Commando…) require Discord to verify
-    that Steam has at least partially downloaded them.
-    Steam Quest Mode bypasses this by:
-    1. Fetching app info automatically from SteamCMD public API
-    2. Generating a fake appmanifest_<appid>.acf in your steamapps/ folder
-    3. Placing the fake exe directly in steamapps/common/<installdir>/
-    Discord then sees a valid Steam manifest + a running process = quest detected.
+    {Colors.BOLD}Steam Quest Mode:{Colors.RESET}
+    1. Searches Steam for game metadata, hero artwork, and an icon
+    2. Creates the game-specific path in the local simulations folder
+    3. Press Enter in the main app to stop and clean up the session
+    Steam libraries and existing files are preserved.
     
     {Colors.BOLD}Database Sources:{Colors.RESET}
     • Primary: Discord Official API
     • Backup:  GitHub Archive by Cynosphere
     
     {Colors.BOLD}Pro Tips:{Colors.RESET}
-    • Use Steam Quest Mode for games not detected by modes 1 or 2
+    • Use Steam Quest Mode to search Steam's catalog
     • Find AppIDs at https://steamdb.info
     • The fake process must stay running for Discord to detect it
     
     {Colors.BOLD}{Colors.GREEN}Multi-Game Emulation:{Colors.RESET}
     • Run this tool multiple times to emulate multiple games at once
-    • Complete ALL orb quests simultaneously in just 15 minutes
+    • Check each quest's requirements and progress in Discord
     
     {Colors.BOLD}{Colors.RED}WARNING - EDUCATIONAL PURPOSES ONLY{Colors.RESET}
     • Users are SOLELY responsible for compliance with Discord ToS
@@ -155,6 +147,8 @@ def show_credits() -> None:
     • Use at your own risk
     
     {Colors.GRAY}Made by {config.DEVELOPER}{Colors.RESET}
+    {Colors.GRAY}Original project by {config.ORIGINAL_DEVELOPERS}{Colors.RESET}
+    {Colors.CYAN}Contributions by {config.CONTRIBUTOR}: detection fixes, cleanup improvements, and themed timer UI.{Colors.RESET}
     {Colors.GRAY}Press Enter to return to menu...{Colors.RESET}
 """
     print(credits_text)

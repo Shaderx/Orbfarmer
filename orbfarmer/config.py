@@ -1,5 +1,5 @@
 """
-orbshacker – central configuration.
+orbfarmer – central configuration.
 
 Reads user-editable values from the root-level ``settings.py``.
 If a value is missing there, the default defined below is used.
@@ -7,9 +7,7 @@ Internal-only constants (API URLs, headers, timeouts) live here
 and are NOT exposed in settings.py.
 """
 
-import importlib.util
 import json
-import shutil
 import sys
 from pathlib import Path
 import subprocess
@@ -21,10 +19,9 @@ from .path_utils import sanitize_relative_path
 T = TypeVar("T")
 
 def _get_default_json_content() -> str:
-    desktop_path = Path.home() / "Desktop"
-    desktop_str = str(desktop_path).replace("\\", "/")
     content = {
-        "CHOSEN_FOLDER": desktop_str,
+        "CHOSEN_FOLDER": ".",
+        "FAKE_EXE_DIR": "simulations",
         "AUTO_DELETE": False,
         "TIMER_MINUTES": 15
     }
@@ -34,10 +31,10 @@ def _is_faked_game() -> bool:
     """Check if the currently running executable/script is a faked game copy."""
     if getattr(sys, "frozen", False):
         name = Path(sys.executable).name.lower()
-        return name != "orbshacker.exe"
+        return name != "orbfarmer.exe"
     else:
         name = Path(sys.argv[0]).name.lower()
-        return name not in ("orbshacker.py", "__main__.py") and "pytest" not in name
+        return name not in ("orbfarmer.py", "__main__.py") and "pytest" not in name
 
 def _load_embedded_settings() -> dict | None:
     if not getattr(sys, "frozen", False):
@@ -54,7 +51,7 @@ def _load_embedded_settings() -> dict | None:
             f.seek(file_size - read_size)
             chunk = f.read(read_size)
         
-        marker = b"__ORBSHACKER_BAKED_CONFIG__"
+        marker = b"__ORBFARMER_BAKED_CONFIG__"
         if marker in chunk:
             parts = chunk.split(marker)
             if len(parts) >= 3:
@@ -95,22 +92,12 @@ def _load_settings():
         except Exception:
             pass
 
-    # 4. Fallback to settings.py (backward compatibility)
+    # Compiled applications accept data-only JSON configuration. Never execute
+    # a Python sidecar placed next to the downloaded executable.
     if getattr(sys, "frozen", False):
-        # Look for settings.py next to the exe
-        exe_dir = Path(sys.executable).parent
-        settings_path = exe_dir / "settings.py"
-        if settings_path.exists():
-            try:
-                spec = importlib.util.spec_from_file_location("settings", str(settings_path))
-                if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules["settings"] = module
-                    spec.loader.exec_module(module)
-                    return module
-            except Exception:
-                pass
+        return None
 
+    # Source checkouts retain settings.py compatibility.
     try:
         import settings as _user  # root-level settings.py
         return _user
@@ -167,11 +154,13 @@ def _resolve_version() -> str:
 
 # ── App identity ──────────────────────────────────────────────────────────────
 VERSION   = _resolve_version()
-DEVELOPER = "Strykey / Daniel Pires / Pannenkoekisus"
+DEVELOPER = "shaderx"
+ORIGINAL_DEVELOPERS = "Strykey / Daniel Pires / Pannenkoekisus"
+CONTRIBUTOR = "shaderx"
 
 # ── GitHub repo ───────────────────────────────────────────────────────────────
-GITHUB_REPO_OWNER = "DanielPires2000"
-GITHUB_REPO_NAME  = "orbshacker"
+GITHUB_REPO_OWNER = "Shaderx"
+GITHUB_REPO_NAME  = "Orbfarmer"
 REPO_URL          = f"https://github.com/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}"
 
 # ── Network endpoints (internal – not in settings.py) ─────────────────────────
@@ -202,19 +191,22 @@ DISCORD_HEADERS = {
 # ── UI / UX (user-editable via settings.py or settings.json) ──────────────────
 SLEEP_SHORT        = 1.0
 SLEEP_LONG         = 2.0
-FAKE_EXE_DIR       = sanitize_relative_path(_get("FAKE_EXE_DIR", "Win64"))
+FAKE_EXE_DIR       = sanitize_relative_path(_get("FAKE_EXE_DIR", "simulations"))
 MAX_SEARCH_RESULTS = 20
 AUTO_DELETE        = _get("AUTO_DELETE",        False)
 TIMER_MINUTES      = _get("TIMER_MINUTES",      15)
-STEAM_MANIFEST_PATH = _get("STEAM_MANIFEST_PATH", None)
+TIMER_THEME        = _get("TIMER_THEME",        {})
 
 # Resolve CHOSEN_FOLDER as a Path object
-default_folder = str(Path.home() / "Desktop")
+app_folder = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
+default_folder = "."
 chosen_folder_val = _get("CHOSEN_FOLDER", default_folder)
 if isinstance(chosen_folder_val, str):
-    if chosen_folder_val.strip() == "Desktop" or not chosen_folder_val.strip():
+    if chosen_folder_val.strip() == "Desktop":
         CHOSEN_FOLDER = Path.home() / "Desktop"
     else:
-        CHOSEN_FOLDER = Path(chosen_folder_val)
+        CHOSEN_FOLDER = Path(chosen_folder_val.strip() or ".")
+        if not CHOSEN_FOLDER.is_absolute():
+            CHOSEN_FOLDER = app_folder / CHOSEN_FOLDER
 else:
     CHOSEN_FOLDER = chosen_folder_val
