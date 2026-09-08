@@ -5,17 +5,15 @@ import time
 
 
 def run_timer(minutes: int = 15, theme: dict | None = None) -> None:
-    """Remain visible for the configured duration, then exit.
+    """Count elapsed time until stopped; minutes is retained for old callers.
 
     File deletion is intentionally owned by ``GameFaker.cleanup`` in the main
     process, where hashes and creation records can be checked safely.
     """
-    seconds = max(0, minutes * 60)
-    if not seconds:
-        return
+    seconds = 0
     if sys.platform != "win32":
-        time.sleep(seconds)
-        return
+        while True:
+            time.sleep(1)
 
     try:
         import tkinter as tk
@@ -30,7 +28,6 @@ def run_timer(minutes: int = 15, theme: dict | None = None) -> None:
 
 
 def _run_themed_timer(seconds: float, theme: dict) -> None:
-    import math
     import re
     from pathlib import Path
     import tkinter as tk
@@ -98,13 +95,12 @@ def _run_themed_timer(seconds: float, theme: dict) -> None:
                        fill="#a5acb7", font=("Segoe UI", 10), anchor="w")
 
     canvas.create_line(36, 326, 784, 326, fill="#2b323c")
-    canvas.create_text(36, 351, text="TIME REMAINING", fill="#9ca6b4", font=("Segoe UI", 9, "bold"), anchor="w")
+    canvas.create_text(36, 351, text="TIME ELAPSED", fill="#9ca6b4", font=("Segoe UI", 9, "bold"), anchor="w")
     countdown = canvas.create_text(32, 389, text="", fill="#f5f7fa", font=("Consolas", 38, "bold"), anchor="w")
-    duration = f"{seconds / 60:g} minute session"
+    duration = "Runs until you stop it"
     canvas.create_text(784, 373, text=duration, fill="#e6e9ed", font=("Segoe UI", 11), anchor="e")
     canvas.create_text(784, 397, text="Check quest progress in Discord", fill="#939eac", font=("Segoe UI", 9), anchor="e")
     canvas.create_rectangle(36, 431, 784, 435, fill="#2b323c", outline="")
-    progress = canvas.create_rectangle(36, 431, 36, 435, fill=accent, outline="")
     canvas.create_text(36, 462, text="Press Enter in the main app to stop and clean up Steam sessions.",
                        fill="#9ca6b4", font=("Segoe UI", 9), anchor="w")
     canvas.create_text(36, 490, text="Improvements by shaderx", fill=accent, font=("Segoe UI", 9), anchor="w")
@@ -127,17 +123,12 @@ def _run_themed_timer(seconds: float, theme: dict) -> None:
     except (AttributeError, OSError):
         pass
 
-    deadline = time.monotonic() + seconds
+    started = time.monotonic()
 
     def tick():
-        remaining = max(0, deadline - time.monotonic())
-        total = math.ceil(remaining)
-        canvas.itemconfigure(countdown, text=f"{total // 60:02d}:{total % 60:02d}")
-        canvas.coords(progress, 36, 431, 36 + 748 * (1 - remaining / seconds), 435)
-        if remaining <= 0:
-            root.destroy()
-        else:
-            root.after(200, tick)
+        total = max(0, int(time.monotonic() - started))
+        canvas.itemconfigure(countdown, text=f"{total // 3600:02d}:{total // 60 % 60:02d}:{total % 60:02d}")
+        root.after(200, tick)
 
     root.deiconify()
     tick()
@@ -182,10 +173,13 @@ def _run_native_timer(seconds: float) -> None:
     if not window:
         raise ctypes.WinError(ctypes.get_last_error())
 
-    deadline = time.monotonic() + seconds
+    user32.SetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    started = time.monotonic()
     message = wintypes.MSG()
     try:
-        while time.monotonic() < deadline and user32.IsWindow(window):
+        while user32.IsWindow(window):
+            total = max(0, int(time.monotonic() - started))
+            user32.SetWindowTextW(window, f"Orbfarmer | Time elapsed {total // 3600:02d}:{total // 60 % 60:02d}:{total % 60:02d}")
             while user32.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
                 user32.TranslateMessage(ctypes.byref(message))
                 user32.DispatchMessageW(ctypes.byref(message))

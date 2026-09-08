@@ -175,10 +175,12 @@ def test_non_windows_timer_only_waits_and_exits():
     from orbfarmer.timer import run_timer
 
     with patch("orbfarmer.timer.sys.platform", "linux"), \
-         patch("orbfarmer.timer.time.sleep") as sleep:
-        run_timer(2)
+         patch("orbfarmer.timer.time.sleep", side_effect=KeyboardInterrupt) as sleep:
+        import pytest
+        with pytest.raises(KeyboardInterrupt):
+            run_timer(2)
 
-    sleep.assert_called_once_with(120)
+    sleep.assert_called_once_with(1)
 
 
 def test_load_settings_baked_frozen(tmp_path):

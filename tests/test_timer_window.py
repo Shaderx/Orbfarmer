@@ -28,7 +28,7 @@ def tk_environment(tmp_path_factory):
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows game detection")
 @pytest.mark.parametrize("source_script", [False, True])
-def test_timer_has_visible_window_and_exits_at_deadline(tmp_path, monkeypatch, source_script, tk_environment):
+def test_timer_stays_visible_past_old_deadline_until_closed(tmp_path, monkeypatch, source_script, tk_environment):
     # Windows venv launchers spawn a child; use the interpreter that owns the window.
     python = getattr(sys, "_base_executable", sys.executable)
     if source_script:
@@ -69,6 +69,10 @@ def test_timer_has_visible_window_and_exits_at_deadline(tmp_path, monkeypatch, s
         title = ctypes.create_unicode_buffer(256)
         user32.GetWindowTextW(visible[0], title, len(title))
         assert "| Orbfarmer" in title.value, "The timer fell back to the unthemed window"
+        time.sleep(3)
+        assert proc.poll() is None, "Timer exited at the old duration limit"
+        user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        user32.PostMessageW(visible[0], 0x0010, 0, 0)  # WM_CLOSE
         assert proc.wait(timeout=5) == 0
     finally:
         if proc.poll() is None:

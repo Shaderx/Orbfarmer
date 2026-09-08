@@ -20,7 +20,7 @@ Steam artwork. Visible timers. Local, scoped cleanup.
 ### Small by design
 
 - **Find a game** through Discord's database or Steam's catalog, or enter an executable path.
-- **Keep it visible** with a game-themed window, Steam hero image and icon, sampled accent colors, and a live countdown.
+- **Keep it visible** with a game-themed window, Steam hero image and icon, sampled accent colors, and an elapsed-time counter (HH:MM:SS). Sessions run until you close the timer or stop them in the main app.
 - **Keep it local** in `simulations/<game path>/` beside the app. No Steam-library edits, client injection, or automatic update installation.
 - **Clean up deliberately.** Steam mode's Enter-to-stop action removes only that session's unchanged, owned files.
 
@@ -30,7 +30,7 @@ Download `Orbfarmer-Windows-x86_64.zip` from [Releases](https://github.com/Shade
 
 Windows is the current development and release focus. **macOS and Linux support is on hold for a future release.** Their initial v1.0.0 packages compiled successfully, but compilation does not establish working Discord detection or feature parity. Treat those existing downloads as experimental and unvalidated for everyday use; future releases currently package Windows only.
 
-The countdown measures local time, **not verified quest progress**. Check Discord for detection and completion. Behavior varies by game; artwork falls back gracefully when unavailable.
+The counter measures local time, **not verified quest progress**. There is no 15-minute cutoff. Check Discord for detection and completion. Behavior varies by game; artwork falls back gracefully when unavailable.
 
 ### Build
 
@@ -61,7 +61,7 @@ Get-FileHash .\Orbfarmer-Windows-x86_64.zip -Algorithm SHA256
 
 Checksums verify file integrity; they are not a publisher signature. Automated tests do not verify Discord quest completion or rewards.
 
-Compiled builds create `settings.json` beside the executable. Defaults: a 15-minute timer, `simulations/` output, and `AUTO_DELETE: false`. Steam mode's explicit stop cleanup works independently of `AUTO_DELETE`; other modes use it for app-exit cleanup.
+Compiled builds create `settings.json` beside the executable. Sessions count up until stopped; the legacy `TIMER_MINUTES` setting is ignored. Defaults include `simulations/` output and `AUTO_DELETE: false`. Steam mode's explicit stop cleanup works independently of `AUTO_DELETE`; other modes use it for app-exit cleanup.
 
 ### Credits
 
