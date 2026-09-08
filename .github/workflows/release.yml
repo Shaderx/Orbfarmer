@@ -1,16 +1,65 @@
-name: Build & Release
+name: Build and release
 
 on:
   push:
     tags:
-      - 'v*'  # Triggers on tags like v2.1.0, v3.0.0, etc.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (for example, v1.2.3)'
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Validate release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Validate version tag
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag: $RELEASE_TAG"
+            echo "Expected a semantic version such as v1.2.3"
+            exit 1
+          fi
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
   build:
-    runs-on: windows-latest
+    name: Build ${{ matrix.platform }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+            executable: Orbfarmer.exe
+            archive: Orbfarmer-Windows-x86_64.zip
+          - os: macos-latest
+            platform: macOS
+            executable: Orbfarmer
+            archive: Orbfarmer-macOS.tar.gz
+          - os: ubuntu-latest
+            platform: Linux
+            executable: Orbfarmer
+            archive: Orbfarmer-Linux-x86_64.tar.gz
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -23,47 +72,70 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          pip install --only-binary=:all: -r requirements-build.txt
-
-      - name: Get and validate tag
-        id: tag
-        shell: bash
-        run: |
-          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid tag format: ${GITHUB_REF_NAME}"
-            echo "Expected format: vX.Y.Z"
-            exit 1
-          fi
-
-          echo "TAG_NAME=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+        run: python -m pip install --only-binary=:all: -r requirements-build.txt
 
       - name: Write version metadata
         shell: bash
         run: |
-          VERSION="${{ steps.tag.outputs.TAG_NAME }}"
-          printf 'VERSION = "%s"\n' "${VERSION#v}" > orbfarmer/_version.py
+          printf 'VERSION = "%s"\n' '${{ needs.prepare.outputs.version }}' > orbfarmer/_version.py
 
-      - name: Run tests
+      - name: Run test suite
         run: python -m pytest -q
 
       - name: Build executable
+        run: python build.py
+
+      - name: Stage release files
+        shell: bash
         run: |
-          python build.py
+          mkdir release-package
+          cp 'dist-local/${{ matrix.executable }}' release-package/
+          cp README.md LICENSE release-package/
+
+      - name: Package Windows release
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path release-package/* -DestinationPath '${{ matrix.archive }}'
+
+      - name: Package Unix release
+        if: runner.os != 'Windows'
+        shell: bash
+        run: tar -C release-package -czf '${{ matrix.archive }}' .
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.platform }}-release
+          path: ${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum Orbfarmer-* > SHA256SUMS.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
-          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
-          name: Orbfarmer ${{ steps.tag.outputs.TAG_NAME }}
-          body: |
-            ## Orbfarmer ${{ steps.tag.outputs.TAG_NAME }}
-            
-            ### Download
-            Download `Orbfarmer.exe` below and run it. No Python required!
-            
-            ### What's new
-            See the [commit log](https://github.com/${{ github.repository }}/commits/${{ steps.tag.outputs.TAG_NAME }}) for details.
-          files: dist-local/Orbfarmer.exe
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Orbfarmer ${{ needs.prepare.outputs.tag }}
+          generate_release_notes: true
+          files: release-assets/*
           draft: false
           prerelease: false

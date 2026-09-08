@@ -55,20 +55,33 @@ def main():
     print(f"[*] Baking version into: {version_file}")
     version_file.write_text(f'VERSION = "{version}"\n', encoding="utf-8")
 
-    # Stage Tcl/Tk scripts in the workspace so native library probes can read them
-    # in restricted build environments. PyInstaller's Tk hook bundles these files.
-    import _tkinter
-    tcl_source = Path(sys.base_prefix) / "tcl"
-    tcl_staging = project_root / "build-local" / "tcl-runtime"
     build_env = os.environ.copy()
-    for env_name, directory in (("TCL_LIBRARY", f"tcl{_tkinter.TCL_VERSION}"),
-                                ("TK_LIBRARY", f"tk{_tkinter.TK_VERSION}")):
-        source = tcl_source / directory
-        if not source.is_dir():
-            raise RuntimeError(f"A complete Python Tcl/Tk installation is required: {source}")
-        shutil.copytree(source, tcl_staging / directory, dirs_exist_ok=True)
-        build_env[env_name] = str(tcl_staging / directory)
-    subprocess.run([sys.executable, "-c", "import tkinter; tkinter.Tcl()"], env=build_env, check=True)
+
+    # The Windows embeddable runtime keeps Tcl/Tk beside Python. Stage it inside
+    # the project so PyInstaller can inspect it in restricted build environments.
+    # On macOS and Linux, PyInstaller discovers the platform installation itself.
+    if sys.platform == "win32":
+        import _tkinter
+
+        tcl_source = Path(sys.base_prefix) / "tcl"
+        tcl_staging = project_root / "build-local" / "tcl-runtime"
+        for env_name, directory in (
+            ("TCL_LIBRARY", f"tcl{_tkinter.TCL_VERSION}"),
+            ("TK_LIBRARY", f"tk{_tkinter.TK_VERSION}"),
+        ):
+            source = tcl_source / directory
+            if not source.is_dir():
+                raise RuntimeError(
+                    f"A complete Python Tcl/Tk installation is required: {source}"
+                )
+            shutil.copytree(source, tcl_staging / directory, dirs_exist_ok=True)
+            build_env[env_name] = str(tcl_staging / directory)
+
+    subprocess.run(
+        [sys.executable, "-c", "import tkinter; tkinter.Tcl()"],
+        env=build_env,
+        check=True,
+    )
 
     # 3. Build with the PyInstaller installed in this exact Python environment.
     cmd = [
@@ -80,7 +93,6 @@ def main():
         "--onefile",
         "--name",
         "Orbfarmer",
-        "--noconsole",
         "--exclude-module",
         "settings",
         "--distpath",
@@ -91,6 +103,11 @@ def main():
         "build-local",
         "orbfarmer.py",
     ]
+
+    # The Windows build allocates its own console when launched. macOS and Linux
+    # need the terminal attached because the main interface is interactive.
+    if sys.platform == "win32":
+        cmd.insert(cmd.index("--exclude-module"), "--noconsole")
 
     print(f"[*] Executing PyInstaller command:\n    {' '.join(cmd)}")
     try:
