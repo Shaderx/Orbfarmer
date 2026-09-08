@@ -163,6 +163,10 @@ def test_is_faked_game():
         assert not orb_module.is_faked_game()
 
     with patch("sys.frozen", True, create=True), \
+         patch("sys.executable", "/Applications/Orbfarmer"):
+        assert not orb_module.is_faked_game()
+
+    with patch("sys.frozen", True, create=True), \
          patch("sys.executable", "C:\\Users\\jjjda\\Desktop\\Win64\\TslGame.exe"):
         assert orb_module.is_faked_game()
 

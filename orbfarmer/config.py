@@ -30,8 +30,8 @@ def _get_default_json_content() -> str:
 def _is_faked_game() -> bool:
     """Check if the currently running executable/script is a faked game copy."""
     if getattr(sys, "frozen", False):
-        name = Path(sys.executable).name.lower()
-        return name != "orbfarmer.exe"
+        name = str(sys.executable).replace("\\", "/").rsplit("/", 1)[-1].lower()
+        return name not in ("orbfarmer", "orbfarmer.exe")
     else:
         name = Path(sys.argv[0]).name.lower()
         return name not in ("orbfarmer.py", "__main__.py") and "pytest" not in name

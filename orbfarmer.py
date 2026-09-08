@@ -28,8 +28,10 @@ if sys.stdin is None:
 def is_faked_game() -> bool:
     """Check if the currently running executable/script is a faked game copy."""
     if getattr(sys, "frozen", False):
-        name = Path(sys.executable).name.lower()
-        return name != "orbfarmer.exe"
+        # Normalize both separator styles so release behavior can be tested on
+        # every runner, and recognize the extensionless Unix executable.
+        name = str(sys.executable).replace("\\", "/").rsplit("/", 1)[-1].lower()
+        return name not in ("orbfarmer", "orbfarmer.exe")
     else:
         name = Path(sys.argv[0]).name.lower()
         return name not in ("orbfarmer.py", "__main__.py") and "pytest" not in name
