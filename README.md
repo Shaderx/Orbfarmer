@@ -4,8 +4,12 @@
 
 **Game sessions, thoughtfully presented.**
 
-A cross-platform companion for Discord game-detection experiments.
+A Windows-first companion for Discord game-detection experiments.
 Steam artwork. Visible timers. Local, scoped cleanup.
+
+[![Build and release](https://github.com/Shaderx/Orbfarmer/actions/workflows/release.yml/badge.svg)](https://github.com/Shaderx/Orbfarmer/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/Shaderx/Orbfarmer)](https://github.com/Shaderx/Orbfarmer/releases/latest)
+[![Windows x64](https://img.shields.io/badge/platform-Windows_x64-0078D4)](https://github.com/Shaderx/Orbfarmer/releases/latest)
 
 [Get started](#get-started) · [Build](#build) · [Releases](https://github.com/Shaderx/Orbfarmer/releases)
 
@@ -22,30 +26,40 @@ Steam artwork. Visible timers. Local, scoped cleanup.
 
 ### Get started
 
-Download the archive for your operating system from [Releases](https://github.com/Shaderx/Orbfarmer/releases), extract it into a writable folder, and launch `Orbfarmer.exe` on Windows or `Orbfarmer` from a terminal on macOS/Linux. Choose a game and keep its timer running. In Steam mode, return to the main wizard and press **Enter** to stop and clean up.
+Download `Orbfarmer-Windows-x86_64.zip` from [Releases](https://github.com/Shaderx/Orbfarmer/releases/latest), extract it into a writable folder, and launch `Orbfarmer.exe` with the Discord desktop app open. Choose a game and keep its timer window open. In Steam mode, return to the main wizard and press **Enter** to stop and clean up.
 
-Windows provides the full game-detection experience. macOS and Linux builds are available for compatible Discord/process-detection setups, but Steam registry discovery and the native visible timer window are Windows-specific.
+Windows is the current development and release focus. **macOS and Linux support is on hold for a future release.** Their initial v1.0.0 packages compiled successfully, but compilation does not establish working Discord detection or feature parity. Treat those existing downloads as experimental and unvalidated for everyday use; future releases currently package Windows only.
 
 The countdown measures local time, **not verified quest progress**. Check Discord for detection and completion. Behavior varies by game; artwork falls back gracefully when unavailable.
 
 ### Build
 
-Python 3.12 with Tcl/Tk is required.
+Windows and Python 3.12 with Tcl/Tk are required for the supported build.
 
-```shell
+```powershell
 git clone https://github.com/Shaderx/Orbfarmer.git
 cd Orbfarmer
 python -m venv .venv
-# Activate with `.venv/bin/activate` on macOS/Linux or
-# `.venv\Scripts\Activate.ps1` in PowerShell on Windows.
-python -m pip install --only-binary=:all: -r requirements-build.txt
-python -m pytest -q
-python build.py
+.\.venv\Scripts\python -m pip install --only-binary=:all: -r requirements-build.txt
+.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python build.py
 ```
 
-The executable is written to `dist-local/Orbfarmer.exe` on Windows and `dist-local/Orbfarmer` on macOS/Linux. For source use, run `python orbfarmer.py` after installing `requirements.txt`.
+The executable is written to `dist-local/Orbfarmer.exe`. For source use, run `python orbfarmer.py` after installing `requirements.txt`.
 
-Pushing a semantic-version tag such as `v1.2.3` automatically tests and builds all three platforms, generates checksums, and publishes a GitHub Release. Maintainers can also start the same workflow manually from the Actions page.
+Pushing a semantic-version tag such as `v1.2.3` automatically runs the tests, builds and packages Windows, generates checksums, and publishes a GitHub Release. Maintainers can also start the workflow manually from the [Actions page](https://github.com/Shaderx/Orbfarmer/actions/workflows/release.yml).
+
+### Validation
+
+The [v1.0.0 GitHub Actions run](https://github.com/Shaderx/Orbfarmer/actions/runs/34208339679) passed all **66 Windows tests**, built the executable with PyInstaller, and uploaded the release archive and `SHA256SUMS.txt`. The tests include timer-window visibility and deadline checks, configuration loading, scoped cleanup, and update-notification behavior. macOS and Linux each passed 64 tests with the two Windows window tests skipped; runtime support remains on hold.
+
+To check a Windows download, compare this command's output with its entry in the release's `SHA256SUMS.txt`:
+
+```powershell
+Get-FileHash .\Orbfarmer-Windows-x86_64.zip -Algorithm SHA256
+```
+
+Checksums verify file integrity; they are not a publisher signature. Automated tests do not verify Discord quest completion or rewards.
 
 Compiled builds create `settings.json` beside the executable. Defaults: a 15-minute timer, `simulations/` output, and `AUTO_DELETE: false`. Steam mode's explicit stop cleanup works independently of `AUTO_DELETE`; other modes use it for app-exit cleanup.
 

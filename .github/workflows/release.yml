@@ -52,14 +52,6 @@ jobs:
             platform: Windows
             executable: Orbfarmer.exe
             archive: Orbfarmer-Windows-x86_64.zip
-          - os: macos-latest
-            platform: macOS
-            executable: Orbfarmer
-            archive: Orbfarmer-macOS.tar.gz
-          - os: ubuntu-latest
-            platform: Linux
-            executable: Orbfarmer
-            archive: Orbfarmer-Linux-x86_64.tar.gz
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -97,11 +89,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path release-package/* -DestinationPath '${{ matrix.archive }}'
-
-      - name: Package Unix release
-        if: runner.os != 'Windows'
-        shell: bash
-        run: tar -C release-package -czf '${{ matrix.archive }}' .
 
       - name: Upload release artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
