@@ -103,3 +103,39 @@ class TestFilterWin32Exes:
         exes = db.get_all_executables(games[0])
         assert exes == ["GameSpecial/Bin/Launch.exe"]
 
+
+def test_get_steam_appid_returns_only_positive_numeric_steam_sku():
+    db = _make_db_with_games([])
+    game = {
+        "third_party_skus": [
+            {"distributor": "steam", "id": "0"},
+            {"distributor": "Steam", "id": "4080220"},
+            {"distributor": "steam", "id": "1e3"},
+        ]
+    }
+
+    assert db.get_steam_appid(game) == 4080220
+    assert db.get_steam_appid({"third_party_skus": [{"distributor": "steam", "id": "-8"}]}) is None
+
+
+def test_database_mode_routes_steam_library_choice_without_new_search():
+    from unittest.mock import MagicMock, patch
+    from orbfarmer.discord_db import database_mode
+
+    db = _make_db_with_games([])
+    db.games = [{
+        "id": "game-record",
+        "name": "EA SPORTS FC 27",
+        "third_party_skus": [{"distributor": "steam", "id": "4080220"}],
+    }]
+    faker = MagicMock()
+
+    with patch("orbfarmer.discord_db._pick_discord_game", return_value=db.games[0]), \
+         patch("orbfarmer.discord_db.choose_steam_run_mode", return_value="library"), \
+         patch("orbfarmer.discord_db.run_steam_library_session") as run_library, \
+         patch("builtins.input", return_value="fc"):
+        database_mode(db, faker)
+
+    run_library.assert_called_once_with(faker, 4080220, game_name="EA SPORTS FC 27")
+    faker.create_fake_game.assert_not_called()
+

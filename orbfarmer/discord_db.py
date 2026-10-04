@@ -14,6 +14,7 @@ from .ui import (
 )
 from .net import fetch_json
 from .errors import NetworkError, DatabaseLoadError
+from .steam import choose_steam_run_mode, run_steam_library_session
 
 
 class ExecutableEntry(TypedDict, total=False):
@@ -119,6 +120,17 @@ class DiscordGamesDB:
     def get_all_executables(self, game: GameRecord) -> list[str]:
         return self._filter_win32_exes(game, skip_patterns=False)
 
+    @staticmethod
+    def get_steam_appid(game: GameRecord) -> int | None:
+        """Return the first valid positive numeric Steam SKU, if present."""
+        for sku in game.get("third_party_skus", []) or []:
+            if str(sku.get("distributor", "")).casefold() != "steam":
+                continue
+            raw_id = str(sku.get("id", ""))
+            if raw_id.isascii() and raw_id.isdigit() and int(raw_id) > 0:
+                return int(raw_id)
+        return None
+
 
 # ── Interactive UI ────────────────────────────────────────────────────────────
 
@@ -197,6 +209,16 @@ def database_mode(db: DiscordGamesDB, faker: GameFaker) -> None:
     if not selected:
         return
 
+    steam_appid = db.get_steam_appid(selected)
+    if steam_appid is not None:
+        print(f"  Steam AppID:        {Colors.GRAY}{steam_appid}{Colors.RESET}")
+        mode = choose_steam_run_mode()
+        if mode is None:
+            return
+        if mode == "library":
+            run_steam_library_session(faker, steam_appid, game_name=selected.get("name"))
+            return
+
     loading_animation("Analysing game data", 0.8)
     exe_name = _resolve_discord_exe(db, selected)
     if not exe_name:
@@ -219,8 +241,6 @@ def database_mode(db: DiscordGamesDB, faker: GameFaker) -> None:
         time.sleep(config.SLEEP_SHORT)
         return
 
-    steam_appid = next((sku.get("id") for sku in selected.get("third_party_skus", [])
-                       if sku.get("distributor") == "steam"), None)
     result = faker.create_fake_game(exe_name, game_name=selected.get("name"), steam_appid=steam_appid)
     if result:
         print()

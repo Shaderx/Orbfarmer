@@ -124,9 +124,10 @@ def show_credits() -> None:
     
     {Colors.BOLD}Steam Quest Mode:{Colors.RESET}
     1. Searches Steam for game metadata, hero artwork, and an icon
-    2. Creates the game-specific path in the local simulations folder
+    2. Choose local output or Steam library + ACF for manifest-based detection
     3. Press Enter in the main app to stop and clean up the session
-    Steam libraries and existing files are preserved.
+    Existing executables default to Run; choose Replace to recreate them.
+    Existing manifests and unchanged files from earlier sessions are preserved.
     
     {Colors.BOLD}Database Sources:{Colors.RESET}
     • Primary: Discord Official API

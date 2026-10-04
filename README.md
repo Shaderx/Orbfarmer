@@ -21,8 +21,9 @@ Steam artwork. Visible timers. Local, scoped cleanup.
 
 - **Find a game** through Discord's database or Steam's catalog, or enter an executable path.
 - **Keep it visible** with a game-themed window, Steam hero image and icon, sampled accent colors, and an elapsed-time counter (HH:MM:SS). Sessions run until you close the timer or stop them in the main app.
-- **Keep it local** in `simulations/<game path>/` beside the app. No Steam-library edits, client injection, or automatic update installation.
-- **Clean up deliberately.** Steam mode's Enter-to-stop action removes only that session's unchanged, owned files.
+- **Choose the output.** Local simulations use `simulations/<game path>/` beside the app. Steam games also offer an optional **Steam library + ACF** session for detection that requires an installed-game manifest.
+- **Reuse an executable.** If the file exists, press Enter to run it. Choose **Replace** to recreate it, or **Cancel** to leave the session.
+- **Clean up deliberately.** Steam mode's Enter-to-stop action removes only that session's unchanged, owned files. Reused executables and existing Steam manifests are preserved.
 
 ### Get started
 
@@ -31,6 +32,16 @@ Download `Orbfarmer-Windows-x86_64.zip` from [Releases](https://github.com/Shade
 Windows is the current development and release focus. **macOS and Linux support is on hold for a future release.** Their initial v1.0.0 packages compiled successfully, but compilation does not establish working Discord detection or feature parity. Treat those existing downloads as experimental and unvalidated for everyday use; future releases currently package Windows only.
 
 The counter measures local time, **not verified quest progress**. There is no 15-minute cutoff. Check Discord for detection and completion. Behavior varies by game; artwork falls back gracefully when unavailable.
+
+### Steam library + ACF
+
+Choose **Steam library + ACF** after selecting a Steam game, or a Discord database game with a Steam AppID. Select the Steam installation folder or another library root, such as `D:\SteamLibrary`, which must contain `steamapps`. The app shows the executable and `appmanifest_<AppID>.acf` paths before setup. Local simulation remains the default.
+
+The library session places the executable under `steamapps/common/<install folder>/` and creates a missing ACF manifest in the same library's `steamapps` folder. If a manifest already exists, the app uses its installation folder and preserves its contents. Press Enter in the main app to stop the session and remove unchanged files created by that session. If Steam changes a generated manifest, cleanup preserves it.
+
+If the selected writes need administrator access, the app explains which paths need it before Windows displays a UAC prompt. You can cancel that prompt to cancel setup. The app keeps the timer at your normal user privileges and uses the approved filesystem helper for preparation and cleanup. Writable libraries, and Run-existing sessions with an existing manifest, do not request elevation.
+
+For **EA SPORTS FC 27**, the app uses AppID `4080220`, folder `EA SPORTS FC 27`, and executable `fc27.exe`. Its new ACF contains only `appid`, `name`, and `installdir`, following the variant supplied in the [FC27 community comments](https://www.reddit.com/r/DiscordQuests/comments/1wq2m86/ea_sports_fc_27_quest/). This FC27 recipe omits `StateFlags`; other games retain `StateFlags = 4`. The [Steam listing](https://store.steampowered.com/app/4080220/) confirms the AppID. If Discord does not start tracking, keep the library session running while you fully restart Steam and Discord. This keeps the manifest available when the clients restart.
 
 ### Build
 

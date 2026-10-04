@@ -57,6 +57,14 @@ def show_console() -> None:
 
 
 if __name__ == "__main__":
+    # Elevated filesystem work runs in a minimal standalone module. Dispatch
+    # before package, settings, or fake-game imports.
+    if "--filesystem-helper" in sys.argv[1:]:
+        from _orbfarmer_elevation import helper_main
+
+        helper_index = sys.argv.index("--filesystem-helper")
+        raise SystemExit(helper_main(sys.argv[helper_index + 1:]))
+
     if is_faked_game() or "--timer-mode" in sys.argv:
         from orbfarmer.timer import run_timer
         try:

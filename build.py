@@ -93,6 +93,14 @@ def main():
         "--onefile",
         "--name",
         "Orbfarmer",
+        # Source-helper detection must also work inside the frozen application.
+        "--add-data",
+        f"{project_root / 'orbfarmer' / 'timer.py'}:orbfarmer",
+        # The elevated helper must be available as code in the frozen app.
+        "--hidden-import",
+        "_orbfarmer_files",
+        "--hidden-import",
+        "_orbfarmer_elevation",
         "--exclude-module",
         "settings",
         "--distpath",
